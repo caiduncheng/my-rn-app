@@ -11,12 +11,12 @@ import {
 import { useRouter } from "expo-router";
 
 const VALID_USERNAME = "admin";
-const VALID_PASSWORD = "123";
+const VALID_PASSWORD = "123456";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("123456");
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState("");
   const [snackVisible, setSnackVisible] = useState(false);
@@ -26,7 +26,7 @@ export default function LoginScreen() {
 
   function handleLogin() {
     if (username === VALID_USERNAME && password === VALID_PASSWORD) {
-      router.push("/camera");
+      router.push("/warehouse");
     } else {
       setError("账号或密码错误");
       setSnackVisible(true);

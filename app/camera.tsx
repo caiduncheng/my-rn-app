@@ -2,10 +2,13 @@ import { useState } from "react";
 import { View, StyleSheet, Vibration } from "react-native";
 import { Text, Button, Surface, IconButton, Divider } from "react-native-paper";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { scanStore } from "./scanStore";
 
 export default function CameraScreen() {
   const router = useRouter();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const warehouseMode = from === "warehouse";
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(false);
@@ -25,6 +28,11 @@ export default function CameraScreen() {
     setScanned(true);
     setScanning(false);
     Vibration.vibrate(100);
+    if (warehouseMode) {
+      scanStore.set(data);
+      router.back();
+      return;
+    }
     setResult({ type, data });
   }
 
@@ -56,7 +64,7 @@ export default function CameraScreen() {
               <View style={styles.sideMask} />
             </View>
             <View style={styles.bottomMask}>
-              <Text style={styles.hint}>将二维码放入框内自动识别</Text>
+              <Text style={styles.hint}>{warehouseMode ? "扫描快递条码自动入库" : "将二维码放入框内自动识别"}</Text>
               <IconButton
                 icon="close"
                 size={28}
@@ -127,8 +135,11 @@ export default function CameraScreen() {
             </>
           )}
 
-          <Button mode="text" onPress={() => router.back()} style={styles.backBtn}>
-            返回登录
+          <Button mode="text" icon="table" onPress={() => router.push("/warehouse")} style={styles.backBtn}>
+            查看入库记录
+          </Button>
+          <Button mode="text" onPress={() => router.replace("/")} style={styles.backBtn}>
+            退出登录
           </Button>
         </Surface>
       </View>
