@@ -440,6 +440,7 @@ export default function WarehouseScreen() {
           icon="plus"
           label="新增入库"
           style={styles.fab}
+          color="#fff"
           onPress={() => setModalVisible(true)}
         />
 
