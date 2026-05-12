@@ -39,6 +39,7 @@ interface StockRecord {
   weight: string;
   remark: string;
   status: Status;
+  pickupCode: string;
 }
 
 const COURIERS = ["顺丰速递", "京东快递", "圆通速递", "中通快递", "韵达快递", "中国邮政"];
@@ -79,49 +80,49 @@ const INITIAL_RECORDS: StockRecord[] = [
     id: "1", orderNo: "SF1234567890", productName: "苹果手机 iPhone 16",
     courier: "顺丰速递", recipient: "张三", phone: "138****5678",
     shelf: "A-01", entryDate: "2026-05-07", weight: "0.5",
-    remark: "易碎品，轻拿轻放", status: "overdue",
+    remark: "易碎品，轻拿轻放", status: "overdue", pickupCode: "3821",
   },
   {
     id: "2", orderNo: "JD9876543210", productName: "小米笔记本电脑",
     courier: "京东快递", recipient: "李四", phone: "139****1234",
     shelf: "B-03", entryDate: "2026-05-10", weight: "2.1",
-    remark: "", status: "pending",
+    remark: "", status: "pending", pickupCode: "5647",
   },
   {
     id: "3", orderNo: "YTO5566778899", productName: "耐克运动鞋",
     courier: "圆通速递", recipient: "王五", phone: "135****9012",
     shelf: "C-07", entryDate: "2026-05-10", weight: "1.2",
-    remark: "", status: "picked",
+    remark: "", status: "picked", pickupCode: "2934",
   },
   {
     id: "4", orderNo: "ZTO1122334455", productName: "美的空气净化器",
     courier: "中通快递", recipient: "赵六", phone: "136****3456",
     shelf: "A-05", entryDate: "2026-05-11", weight: "5.8",
-    remark: "大件，放一楼", status: "pending",
+    remark: "大件，放一楼", status: "pending", pickupCode: "7156",
   },
   {
     id: "5", orderNo: "YD6677889900", productName: "飞利浦电动牙刷",
     courier: "韵达快递", recipient: "陈七", phone: "137****7890",
     shelf: "D-02", entryDate: "2026-05-11", weight: "0.8",
-    remark: "", status: "pending",
+    remark: "", status: "pending", pickupCode: "4829",
   },
   {
     id: "6", orderNo: "EMS0011223344", productName: "书籍《百年孤独》",
     courier: "中国邮政", recipient: "周八", phone: "134****2345",
     shelf: "B-01", entryDate: "2026-05-09", weight: "0.3",
-    remark: "", status: "picked",
+    remark: "", status: "picked", pickupCode: "6371",
   },
   {
     id: "7", orderNo: "SF9988776655", productName: "索尼耳机 WH-1000XM5",
     courier: "顺丰速递", recipient: "吴九", phone: "133****4567",
     shelf: "A-03", entryDate: "2026-05-08", weight: "0.6",
-    remark: "超期未取", status: "overdue",
+    remark: "超期未取", status: "overdue", pickupCode: "9042",
   },
   {
     id: "8", orderNo: "JD4433221100", productName: "海尔冰箱配件",
     courier: "京东快递", recipient: "郑十", phone: "132****8901",
     shelf: "E-10", entryDate: "2026-05-11", weight: "3.5",
-    remark: "", status: "pending",
+    remark: "", status: "pending", pickupCode: "1583",
   },
 ];
 
@@ -130,7 +131,6 @@ const EMPTY_FORM = {
   recipient: "", phone: "", shelf: "", weight: "", remark: "",
 };
 
-// ── Random field generation (used when scanning) ──────────────────────────────
 const RANDOM_NAMES = ["张伟", "李芳", "王明", "赵丽", "钱强", "孙莉", "周鑫", "吴静", "郑磊", "冯敏", "陈阳", "刘青", "杨帆", "黄燕", "林峰"];
 const SHELF_LIST   = ["A-01", "A-02", "A-03", "A-04", "B-01", "B-02", "B-03", "C-01", "C-02", "D-01", "D-02", "E-10"];
 const COURIER_PREFIXES: Record<string, string> = {
@@ -155,6 +155,15 @@ function randomFields() {
   };
 }
 
+function genPickupCode(): string {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+function daysSince(dateStr: string): number {
+  const entry = new Date(dateStr + "T00:00:00");
+  return Math.max(0, Math.floor((Date.now() - entry.getTime()) / 86400000));
+}
+
 function getToday() {
   return new Date().toISOString().split("T")[0];
 }
@@ -168,10 +177,7 @@ function fmtHeaderDate(dateStr: string) {
   return `${y}年${m}月${day}日  ${days[d.getDay()]}`;
 }
 
-// ── Stat card ──────────────────────────────────────────────────────────────────
-function StatCard({
-  label, value, icon, color,
-}: {
+function StatCard({ label, value, icon, color }: {
   label: string; value: number; icon: string; color: string;
 }) {
   return (
@@ -183,7 +189,15 @@ function StatCard({
   );
 }
 
-// ── Main screen ────────────────────────────────────────────────────────────────
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={detailStyles.row}>
+      <Text style={detailStyles.label}>{label}</Text>
+      <Text style={detailStyles.value}>{value}</Text>
+    </View>
+  );
+}
+
 export default function WarehouseScreen() {
   const router = useRouter();
   const today = getToday();
@@ -194,13 +208,15 @@ export default function WarehouseScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [courierMenuVisible, setCourierMenuVisible] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [detailRecord, setDetailRecord] = useState<StockRecord | null>(null);
 
-  // When returning from camera with a scanned value, auto-open the add modal
   useFocusEffect(
     useCallback(() => {
       const val = scanStore.take();
       if (val) {
         setForm({ ...EMPTY_FORM, productName: val, ...randomFields() });
+        setEditingId(null);
         setModalVisible(true);
       }
     }, []),
@@ -221,34 +237,83 @@ export default function WarehouseScreen() {
         (r) =>
           r.orderNo.toLowerCase().includes(q) ||
           r.recipient.includes(q) ||
-          r.productName.toLowerCase().includes(q),
+          r.productName.toLowerCase().includes(q) ||
+          r.pickupCode.includes(q),
       );
     }
     if (filter !== "all") list = list.filter((r) => r.status === filter);
     return list;
   }, [records, search, filter]);
 
-  function handleAdd() {
+  function openAdd() {
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM });
+    setModalVisible(true);
+  }
+
+  function openEdit(record: StockRecord) {
+    setEditingId(record.id);
+    setForm({
+      orderNo:     record.orderNo,
+      productName: record.productName,
+      courier:     record.courier,
+      recipient:   record.recipient,
+      phone:       record.phone,
+      shelf:       record.shelf,
+      weight:      record.weight,
+      remark:      record.remark,
+    });
+    setDetailRecord(null);
+    setModalVisible(true);
+  }
+
+  function closeFormModal() {
+    setModalVisible(false);
+    setEditingId(null);
+    setForm({ ...EMPTY_FORM });
+  }
+
+  function handleSubmit() {
     if (!form.orderNo.trim() || !form.productName.trim() || !form.recipient.trim()) {
       Alert.alert("提示", "订单号、商品名称和收件人为必填项");
       return;
     }
-    const rec: StockRecord = {
-      id: Date.now().toString(),
-      orderNo:     form.orderNo.trim(),
-      productName: form.productName.trim(),
-      courier:     form.courier,
-      recipient:   form.recipient.trim(),
-      phone:       form.phone.trim(),
-      shelf:       form.shelf.trim(),
-      weight:      form.weight.trim(),
-      remark:      form.remark.trim(),
-      entryDate:   today,
-      status:      "pending",
-    };
-    setRecords((prev) => [rec, ...prev]);
-    setModalVisible(false);
-    setForm({ ...EMPTY_FORM });
+    if (editingId) {
+      setRecords((prev) =>
+        prev.map((r) =>
+          r.id === editingId
+            ? {
+                ...r,
+                orderNo:     form.orderNo.trim(),
+                productName: form.productName.trim(),
+                courier:     form.courier,
+                recipient:   form.recipient.trim(),
+                phone:       form.phone.trim(),
+                shelf:       form.shelf.trim(),
+                weight:      form.weight.trim(),
+                remark:      form.remark.trim(),
+              }
+            : r,
+        ),
+      );
+    } else {
+      const rec: StockRecord = {
+        id:          Date.now().toString(),
+        orderNo:     form.orderNo.trim(),
+        productName: form.productName.trim(),
+        courier:     form.courier,
+        recipient:   form.recipient.trim(),
+        phone:       form.phone.trim(),
+        shelf:       form.shelf.trim(),
+        weight:      form.weight.trim(),
+        remark:      form.remark.trim(),
+        entryDate:   today,
+        status:      "pending",
+        pickupCode:  genPickupCode(),
+      };
+      setRecords((prev) => [rec, ...prev]);
+    }
+    closeFormModal();
   }
 
   function handleDelete(id: string) {
@@ -257,7 +322,10 @@ export default function WarehouseScreen() {
       {
         text: "删除",
         style: "destructive",
-        onPress: () => setRecords((prev) => prev.filter((r) => r.id !== id)),
+        onPress: () => {
+          setRecords((prev) => prev.filter((r) => r.id !== id));
+          setDetailRecord(null);
+        },
       },
     ]);
   }
@@ -267,7 +335,17 @@ export default function WarehouseScreen() {
     setRecords((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: cycle[r.status] } : r)),
     );
+    setDetailRecord((prev) =>
+      prev && prev.id === id ? { ...prev, status: cycle[prev.status] } : prev,
+    );
   }
+
+  function markAsPicked(id: string) {
+    setRecords((prev) => prev.map((r) => r.id === id ? { ...r, status: "picked" } : r));
+    setDetailRecord((prev) => prev && prev.id === id ? { ...prev, status: "picked" } : prev);
+  }
+
+  const isEditing = editingId !== null;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -312,7 +390,7 @@ export default function WarehouseScreen() {
       {/* ── Search ── */}
       <View style={styles.searchWrap}>
         <Searchbar
-          placeholder="搜索订单号 / 收件人 / 商品名称"
+          placeholder="搜索订单号 / 收件人 / 商品 / 取件码"
           value={search}
           onChangeText={setSearch}
           style={styles.searchbar}
@@ -346,7 +424,7 @@ export default function WarehouseScreen() {
       {/* ── Record count ── */}
       <View style={styles.countRow}>
         <Text style={styles.countText}>共 {filtered.length} 条记录</Text>
-        <Text style={styles.countHint}>点击状态标签可切换取件状态</Text>
+        <Text style={styles.countHint}>点击行查看详情及取件码</Text>
       </View>
 
       {/* ── Table ── */}
@@ -375,105 +453,217 @@ export default function WarehouseScreen() {
               </View>
             ) : (
               filtered.map((r, idx) => (
-                <View
+                <TouchableOpacity
                   key={r.id}
-                  style={[styles.trow, idx % 2 === 0 ? styles.rowEven : styles.rowOdd]}
+                  onPress={() => setDetailRecord(r)}
+                  activeOpacity={0.75}
                 >
-                  <Text style={[styles.td, C.no]}>{idx + 1}</Text>
+                  <View style={[styles.trow, idx % 2 === 0 ? styles.rowEven : styles.rowOdd]}>
+                    <Text style={[styles.td, C.no]}>{idx + 1}</Text>
 
-                  <View style={[styles.tdView, C.order]}>
-                    <Text style={styles.orderText} numberOfLines={1}>{r.orderNo}</Text>
-                    {r.remark ? (
-                      <Text style={styles.remarkText} numberOfLines={1}>{r.remark}</Text>
-                    ) : null}
-                  </View>
-
-                  <Text style={[styles.td, C.product]} numberOfLines={2}>{r.productName}</Text>
-
-                  <View style={[styles.tdView, C.courier]}>
-                    <View style={[styles.courierBadge, { backgroundColor: COURIER_COLOR[r.courier] || "#888" }]}>
-                      <Text style={styles.courierBadgeText}>{COURIER_ABBR[r.courier] || r.courier.slice(0, 2)}</Text>
+                    <View style={[styles.tdView, C.order]}>
+                      <Text style={styles.orderText} numberOfLines={1}>{r.orderNo}</Text>
+                      {r.remark ? (
+                        <Text style={styles.remarkText} numberOfLines={1}>{r.remark}</Text>
+                      ) : null}
                     </View>
-                  </View>
 
-                  <Text style={[styles.td, C.recipient]}>{r.recipient}</Text>
-                  <Text style={[styles.td, C.phone, styles.phoneText]}>{r.phone}</Text>
+                    <Text style={[styles.td, C.product]} numberOfLines={2}>{r.productName}</Text>
 
-                  <View style={[styles.tdView, C.shelf]}>
-                    <View style={styles.shelfBadge}>
-                      <Text style={styles.shelfText}>{r.shelf || "—"}</Text>
-                    </View>
-                  </View>
-
-                  <Text style={[styles.td, C.date]}>{r.entryDate.slice(5)}</Text>
-                  <Text style={[styles.td, C.weight]}>{r.weight ? `${r.weight}kg` : "—"}</Text>
-
-                  <View style={[styles.tdView, C.status]}>
-                    <TouchableOpacity onPress={() => cycleStatus(r.id)}>
-                      <View style={[styles.statusBadge, { backgroundColor: STATUS_CFG[r.status].bg }]}>
-                        <Text style={[styles.statusText, { color: STATUS_CFG[r.status].color }]}>
-                          {STATUS_CFG[r.status].label}
-                        </Text>
+                    <View style={[styles.tdView, C.courier]}>
+                      <View style={[styles.courierBadge, { backgroundColor: COURIER_COLOR[r.courier] || "#888" }]}>
+                        <Text style={styles.courierBadgeText}>{COURIER_ABBR[r.courier] || r.courier.slice(0, 2)}</Text>
                       </View>
-                    </TouchableOpacity>
-                  </View>
+                    </View>
 
-                  <View style={[styles.tdView, C.action]}>
-                    <IconButton
-                      icon="delete-outline"
-                      size={18}
-                      iconColor="#EF5350"
-                      onPress={() => handleDelete(r.id)}
-                      style={styles.delBtn}
-                    />
+                    <Text style={[styles.td, C.recipient]}>{r.recipient}</Text>
+                    <Text style={[styles.td, C.phone, styles.phoneText]}>{r.phone}</Text>
+
+                    <View style={[styles.tdView, C.shelf]}>
+                      <View style={styles.shelfBadge}>
+                        <Text style={styles.shelfText}>{r.shelf || "—"}</Text>
+                      </View>
+                    </View>
+
+                    <Text style={[styles.td, C.date]}>{r.entryDate.slice(5)}</Text>
+                    <Text style={[styles.td, C.weight]}>{r.weight ? `${r.weight}kg` : "—"}</Text>
+
+                    <View style={[styles.tdView, C.status]}>
+                      <TouchableOpacity onPress={() => cycleStatus(r.id)}>
+                        <View style={[styles.statusBadge, { backgroundColor: STATUS_CFG[r.status].bg }]}>
+                          <Text style={[styles.statusText, { color: STATUS_CFG[r.status].color }]}>
+                            {STATUS_CFG[r.status].label}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={[styles.tdView, C.action]}>
+                      <IconButton
+                        icon="pencil-outline"
+                        size={17}
+                        iconColor="#6750A4"
+                        onPress={() => openEdit(r)}
+                        style={styles.actionBtn}
+                      />
+                      <IconButton
+                        icon="delete-outline"
+                        size={17}
+                        iconColor="#EF5350"
+                        onPress={() => handleDelete(r.id)}
+                        style={styles.actionBtn}
+                      />
+                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </View>
         </ScrollView>
       </ScrollView>
 
-      {/* ── FAB + Modal ── */}
+      {/* ── FAB + Modals ── */}
       <Portal>
         <FAB
           icon="plus"
           label="新增入库"
           style={styles.fab}
           color="#fff"
-          onPress={() => setModalVisible(true)}
+          onPress={openAdd}
         />
 
+        {/* ── Detail Modal ── */}
+        <Modal
+          visible={detailRecord !== null}
+          onDismiss={() => setDetailRecord(null)}
+          contentContainerStyle={styles.modal}
+        >
+          {detailRecord && (() => {
+            const days = daysSince(detailRecord.entryDate);
+            const cfg = STATUS_CFG[detailRecord.status];
+            return (
+              <View>
+                <View style={styles.modalHeader}>
+                  <Text variant="titleLarge" style={styles.modalTitle}>包裹详情</Text>
+                  <IconButton icon="close" onPress={() => setDetailRecord(null)} />
+                </View>
+                <Divider />
+                <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                  {/* Pickup code card */}
+                  <View style={detailStyles.codeCard}>
+                    <Text style={detailStyles.codeLabel}>取件码</Text>
+                    <Text style={detailStyles.codeValue}>{detailRecord.pickupCode}</Text>
+                    <Text style={detailStyles.codeHint}>告知客户此取件码，凭码取件</Text>
+                  </View>
+
+                  {/* Status + days */}
+                  <View style={[detailStyles.statusRow, { backgroundColor: cfg.bg }]}>
+                    <Text style={[detailStyles.statusBadge, { color: cfg.color }]}>{cfg.label}</Text>
+                    <Text style={detailStyles.daysText}>
+                      已存放 {days} 天{days >= 3 ? "  ⚠ 建议提醒客户" : ""}
+                    </Text>
+                  </View>
+
+                  {/* Info grid */}
+                  <View style={detailStyles.infoCard}>
+                    <DetailRow label="订单号"   value={detailRecord.orderNo} />
+                    <Divider style={detailStyles.divider} />
+                    <DetailRow label="商品名称" value={detailRecord.productName} />
+                    <Divider style={detailStyles.divider} />
+                    <DetailRow label="快递公司" value={detailRecord.courier} />
+                    <Divider style={detailStyles.divider} />
+                    <DetailRow label="收件人"   value={detailRecord.recipient} />
+                    <Divider style={detailStyles.divider} />
+                    <DetailRow label="联系电话" value={detailRecord.phone || "—"} />
+                    <Divider style={detailStyles.divider} />
+                    <DetailRow label="货架号"   value={detailRecord.shelf || "—"} />
+                    <Divider style={detailStyles.divider} />
+                    <DetailRow label="入库日期" value={detailRecord.entryDate} />
+                    <Divider style={detailStyles.divider} />
+                    <DetailRow label="重量"     value={detailRecord.weight ? `${detailRecord.weight} kg` : "—"} />
+                    {detailRecord.remark ? (
+                      <>
+                        <Divider style={detailStyles.divider} />
+                        <DetailRow label="备注" value={detailRecord.remark} />
+                      </>
+                    ) : null}
+                  </View>
+
+                  {/* Actions */}
+                  <View style={detailStyles.actions}>
+                    {detailRecord.status !== "picked" && (
+                      <Button
+                        mode="contained"
+                        icon="check-circle-outline"
+                        onPress={() => markAsPicked(detailRecord.id)}
+                        style={[detailStyles.actionBtn, { backgroundColor: "#2E7D32" }]}
+                        contentStyle={detailStyles.actionBtnContent}
+                      >
+                        标记已取件
+                      </Button>
+                    )}
+                    <Button
+                      mode="outlined"
+                      icon="pencil-outline"
+                      onPress={() => openEdit(detailRecord)}
+                      style={detailStyles.actionBtn}
+                      contentStyle={detailStyles.actionBtnContent}
+                    >
+                      编辑信息
+                    </Button>
+                    <Button
+                      mode="outlined"
+                      icon="delete-outline"
+                      onPress={() => handleDelete(detailRecord.id)}
+                      style={[detailStyles.actionBtn, detailStyles.deleteBtn]}
+                      textColor="#EF5350"
+                      contentStyle={detailStyles.actionBtnContent}
+                    >
+                      删除记录
+                    </Button>
+                  </View>
+                </ScrollView>
+              </View>
+            );
+          })()}
+        </Modal>
+
+        {/* ── Add / Edit Modal ── */}
         <Modal
           visible={modalVisible}
-          onDismiss={() => setModalVisible(false)}
+          onDismiss={closeFormModal}
           contentContainerStyle={styles.modal}
         >
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
             <View style={styles.modalHeader}>
-              <Text variant="titleLarge" style={styles.modalTitle}>新增入库记录</Text>
-              <IconButton icon="close" onPress={() => setModalVisible(false)} />
+              <Text variant="titleLarge" style={styles.modalTitle}>
+                {isEditing ? "编辑入库记录" : "新增入库记录"}
+              </Text>
+              <IconButton icon="close" onPress={closeFormModal} />
             </View>
             <Divider />
             <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-              {/* Scan button */}
-              <Button
-                mode="contained-tonal"
-                icon="qrcode-scan"
-                onPress={() => {
-                  setModalVisible(false);
-                  router.push({ pathname: "/camera", params: { from: "warehouse" } } as any);
-                }}
-                style={styles.scanBtn}
-                contentStyle={styles.scanBtnContent}
-              >
-                扫码录入商品信息
-              </Button>
-              <View style={styles.orRow}>
-                <View style={styles.orLine} />
-                <Text style={styles.orText}>或手动填写</Text>
-                <View style={styles.orLine} />
-              </View>
+              {!isEditing && (
+                <>
+                  <Button
+                    mode="contained-tonal"
+                    icon="qrcode-scan"
+                    onPress={() => {
+                      setModalVisible(false);
+                      router.push({ pathname: "/camera", params: { from: "warehouse" } } as any);
+                    }}
+                    style={styles.scanBtn}
+                    contentStyle={styles.scanBtnContent}
+                  >
+                    扫码录入商品信息
+                  </Button>
+                  <View style={styles.orRow}>
+                    <View style={styles.orLine} />
+                    <Text style={styles.orText}>或手动填写</Text>
+                    <View style={styles.orLine} />
+                  </View>
+                </>
+              )}
 
               <TextInput
                 label="订单号 *"
@@ -492,7 +682,6 @@ export default function WarehouseScreen() {
                 style={styles.formInput}
               />
 
-              {/* Courier picker */}
               <Menu
                 visible={courierMenuVisible}
                 onDismiss={() => setCourierMenuVisible(false)}
@@ -567,7 +756,7 @@ export default function WarehouseScreen() {
               <View style={styles.modalFooter}>
                 <Button
                   mode="outlined"
-                  onPress={() => setModalVisible(false)}
+                  onPress={closeFormModal}
                   style={styles.footerBtn}
                 >
                   取消
@@ -575,10 +764,10 @@ export default function WarehouseScreen() {
                 <Button
                   mode="contained"
                   icon="check"
-                  onPress={handleAdd}
+                  onPress={handleSubmit}
                   style={styles.footerBtn}
                 >
-                  确认入库
+                  {isEditing ? "保存修改" : "确认入库"}
                 </Button>
               </View>
             </ScrollView>
@@ -601,13 +790,59 @@ const C = StyleSheet.create({
   date:      { width: 68 },
   weight:    { width: 60 },
   status:    { width: 96 },
-  action:    { width: 48 },
+  action:    { width: 80 },
+});
+
+const detailStyles = StyleSheet.create({
+  codeCard: {
+    alignItems: "center",
+    backgroundColor: "#6750A4",
+    borderRadius: 16,
+    paddingVertical: 20,
+    marginBottom: 14,
+  },
+  codeLabel: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginBottom: 6 },
+  codeValue: { color: "#fff", fontSize: 52, fontWeight: "900", letterSpacing: 12 },
+  codeHint:  { color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 8 },
+
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+  statusBadge: { fontSize: 14, fontWeight: "700" },
+  daysText:    { fontSize: 12, color: "#555" },
+
+  infoCard: {
+    backgroundColor: "#F8F5FF",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    marginBottom: 16,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  label:   { fontSize: 13, color: "#888", flex: 1 },
+  value:   { fontSize: 13, color: "#1C1B1F", fontWeight: "500", flex: 2, textAlign: "right" },
+  divider: { backgroundColor: "#EEE" },
+
+  actions: { gap: 10, paddingBottom: 8 },
+  actionBtn: { borderRadius: 10 },
+  actionBtnContent: { paddingVertical: 4 },
+  deleteBtn: { borderColor: "#EF5350" },
 });
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#EEE8F4" },
 
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -623,7 +858,6 @@ const styles = StyleSheet.create({
   headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
   headerSub:   { color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 2 },
 
-  // Stats
   statsScroll:  { flexGrow: 0, marginTop: 12 },
   statsContent: { paddingHorizontal: 12, gap: 10 },
   statCard: {
@@ -639,12 +873,10 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: "800", lineHeight: 26 },
   statLabel: { fontSize: 11, color: "#666", marginTop: 2 },
 
-  // Search
-  searchWrap: { paddingHorizontal: 12, paddingTop: 12 },
-  searchbar:  { borderRadius: 10, backgroundColor: "#fff", elevation: 1 },
+  searchWrap:  { paddingHorizontal: 12, paddingTop: 12 },
+  searchbar:   { borderRadius: 10, backgroundColor: "#fff", elevation: 1 },
   searchInput: { fontSize: 14 },
 
-  // Filter
   filterScroll:  { flexGrow: 0 },
   filterContent: { paddingHorizontal: 12, paddingVertical: 6, gap: 8, alignItems: "center" },
   filterChip: {
@@ -655,11 +887,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#DDD",
   },
-  filterChipActive: { backgroundColor: "#6750A4", borderColor: "#6750A4" },
-  filterChipText:   { fontSize: 13, color: "#555" },
+  filterChipActive:     { backgroundColor: "#6750A4", borderColor: "#6750A4" },
+  filterChipText:       { fontSize: 13, color: "#555" },
   filterChipTextActive: { color: "#fff", fontWeight: "600" },
 
-  // Count
   countRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -670,7 +901,6 @@ const styles = StyleSheet.create({
   countText: { fontSize: 13, color: "#444", fontWeight: "600" },
   countHint: { fontSize: 11, color: "#999" },
 
-  // Table
   tableOuter: { flex: 1, backgroundColor: "#fff", marginHorizontal: 12, borderRadius: 12, marginBottom: 4 },
   thead: {
     flexDirection: "row",
@@ -680,12 +910,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
   },
-  th: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#fff",
-    textAlign: "center",
-  },
+  th: { fontSize: 12, fontWeight: "700", color: "#fff", textAlign: "center" },
   trow: {
     flexDirection: "row",
     alignItems: "center",
@@ -696,16 +921,8 @@ const styles = StyleSheet.create({
   },
   rowEven: { backgroundColor: "#fff" },
   rowOdd:  { backgroundColor: "#FAF8FD" },
-  td: {
-    fontSize: 13,
-    color: "#333",
-    textAlign: "center",
-    paddingHorizontal: 2,
-  },
-  tdView: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  td: { fontSize: 13, color: "#333", textAlign: "center", paddingHorizontal: 2 },
+  tdView: { alignItems: "center", justifyContent: "center" },
   orderText:  { fontSize: 12, color: "#1A1A1A", fontWeight: "600" },
   remarkText: { fontSize: 10, color: "#999", marginTop: 2 },
   phoneText:  { fontSize: 11, color: "#666" },
@@ -726,27 +943,16 @@ const styles = StyleSheet.create({
   },
   shelfText: { fontSize: 12, color: "#6750A4", fontWeight: "600" },
 
-  statusBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  statusText: { fontSize: 11, fontWeight: "700" },
+  statusBadge: { paddingHorizontal: 7, paddingVertical: 4, borderRadius: 10 },
+  statusText:  { fontSize: 11, fontWeight: "700" },
 
-  delBtn: { margin: 0 },
+  actionBtn: { margin: 0, marginHorizontal: -2 },
 
-  emptyRow: { height: 100, alignItems: "center", justifyContent: "center" },
+  emptyRow:  { height: 100, alignItems: "center", justifyContent: "center" },
   emptyText: { color: "#AAA", fontSize: 14 },
 
-  // FAB
-  fab: {
-    position: "absolute",
-    bottom: 24,
-    right: 20,
-    backgroundColor: "#6750A4",
-  },
+  fab: { position: "absolute", bottom: 24, right: 20, backgroundColor: "#6750A4" },
 
-  // Modal
   modal: {
     backgroundColor: "#fff",
     marginHorizontal: 16,
@@ -762,16 +968,11 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     paddingVertical: 4,
   },
-  modalTitle: { fontWeight: "700", color: "#1C1B1F" },
-  modalBody:  { padding: 16 },
-  formInput:  { marginBottom: 12, backgroundColor: "#fff" },
-  modalFooter: {
-    flexDirection: "row",
-    gap: 12,
-    paddingTop: 4,
-    paddingBottom: 8,
-  },
-  footerBtn: { flex: 1, borderRadius: 8 },
+  modalTitle:  { fontWeight: "700", color: "#1C1B1F" },
+  modalBody:   { padding: 16 },
+  formInput:   { marginBottom: 12, backgroundColor: "#fff" },
+  modalFooter: { flexDirection: "row", gap: 12, paddingTop: 4, paddingBottom: 8 },
+  footerBtn:   { flex: 1, borderRadius: 8 },
 
   scanBtn:        { borderRadius: 10, marginBottom: 4 },
   scanBtnContent: { paddingVertical: 4 },
