@@ -181,19 +181,21 @@ function StatCard({ label, value, icon, color }: {
   label: string; value: number; icon: string; color: string;
 }) {
   return (
-    <Surface style={[styles.statCard, { borderTopColor: color }]} elevation={2}>
-      <IconButton icon={icon} iconColor={color} size={22} style={styles.statIcon} />
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+    <Surface style={[s.statCard, { borderTopColor: color }]} elevation={3}>
+      <View style={[s.statIconWrap, { backgroundColor: color + "18" }]}>
+        <IconButton icon={icon} iconColor={color} size={20} style={s.statIconBtn} />
+      </View>
+      <Text style={[s.statValue, { color }]}>{value}</Text>
+      <Text style={s.statLabel}>{label}</Text>
     </Surface>
   );
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <View style={detailStyles.row}>
-      <Text style={detailStyles.label}>{label}</Text>
-      <Text style={detailStyles.value}>{value}</Text>
+    <View style={ds.row}>
+      <Text style={ds.label}>{label}</Text>
+      <Text style={ds.value}>{value}</Text>
     </View>
   );
 }
@@ -348,29 +350,30 @@ export default function WarehouseScreen() {
   const isEditing = editingId !== null;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={s.safeArea}>
+
       {/* ── Header ── */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <IconButton icon="package-variant-closed" iconColor="#fff" size={28} style={styles.headerIcon} />
-          <View>
-            <Text style={styles.headerTitle}>快递驿站入库管理</Text>
-            <Text style={styles.headerSub}>{fmtHeaderDate(today)}</Text>
+      <View style={s.header}>
+        <View style={[s.headerBlob, s.headerBlob1]} />
+        <View style={[s.headerBlob, s.headerBlob2]} />
+        <View style={s.headerInner}>
+          <View style={s.headerLeft}>
+            <View style={s.headerIconWrap}>
+              <IconButton icon="package-variant-closed" iconColor="#6750A4" size={24} style={s.headerIconBtn} />
+            </View>
+            <View>
+              <Text style={s.headerTitle}>快递驿站入库管理</Text>
+              <Text style={s.headerSub}>{fmtHeaderDate(today)}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.headerRight}>
-          <IconButton
-            icon="qrcode-scan"
-            iconColor="#fff"
-            size={22}
-            onPress={() => router.push("/camera")}
-          />
-          <IconButton
-            icon="logout"
-            iconColor="#fff"
-            size={22}
-            onPress={() => router.replace("/")}
-          />
+          <View style={s.headerRight}>
+            <TouchableOpacity style={s.headerAction} onPress={() => router.push("/camera")}>
+              <IconButton icon="qrcode-scan" iconColor="#fff" size={20} style={s.headerActionIcon} />
+            </TouchableOpacity>
+            <TouchableOpacity style={s.headerAction} onPress={() => router.replace("/")}>
+              <IconButton icon="logout" iconColor="#fff" size={20} style={s.headerActionIcon} />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
 
@@ -378,8 +381,8 @@ export default function WarehouseScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.statsScroll}
-        contentContainerStyle={styles.statsContent}
+        style={s.statsScroll}
+        contentContainerStyle={s.statsContent}
       >
         <StatCard label="总入库"   value={stats.total}   icon="package-variant"  color="#6750A4" />
         <StatCard label="今日入库" value={stats.today}   icon="calendar-today"   color="#0288D1" />
@@ -388,13 +391,14 @@ export default function WarehouseScreen() {
       </ScrollView>
 
       {/* ── Search ── */}
-      <View style={styles.searchWrap}>
+      <View style={s.searchWrap}>
         <Searchbar
           placeholder="搜索订单号 / 收件人 / 商品 / 取件码"
           value={search}
           onChangeText={setSearch}
-          style={styles.searchbar}
-          inputStyle={styles.searchInput}
+          style={s.searchbar}
+          inputStyle={s.searchInput}
+          iconColor="#6750A4"
         />
       </View>
 
@@ -402,8 +406,8 @@ export default function WarehouseScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filterScroll}
-        contentContainerStyle={styles.filterContent}
+        style={s.filterScroll}
+        contentContainerStyle={s.filterContent}
       >
         {FILTER_OPTS.map((opt) => {
           const active = filter === opt.value;
@@ -411,107 +415,98 @@ export default function WarehouseScreen() {
             <TouchableOpacity
               key={opt.value}
               onPress={() => setFilter(opt.value)}
-              style={[styles.filterChip, active && styles.filterChipActive]}
+              style={[s.chip, active && s.chipActive]}
             >
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                {opt.label}
-              </Text>
+              <Text style={[s.chipText, active && s.chipTextActive]}>{opt.label}</Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
-      {/* ── Record count ── */}
-      <View style={styles.countRow}>
-        <Text style={styles.countText}>共 {filtered.length} 条记录</Text>
-        <Text style={styles.countHint}>点击行查看详情及取件码</Text>
+      {/* ── Count row ── */}
+      <View style={s.countRow}>
+        <Text style={s.countText}>共 {filtered.length} 条记录</Text>
+        <Text style={s.countHint}>点击行查看详情及取件码</Text>
       </View>
 
       {/* ── Table ── */}
-      <ScrollView style={styles.tableOuter} showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.tableOuter} showsVerticalScrollIndicator={false}>
         <ScrollView horizontal showsHorizontalScrollIndicator>
           <View>
             {/* Header row */}
-            <View style={styles.thead}>
-              <Text style={[styles.th, C.no]}>#</Text>
-              <Text style={[styles.th, C.order]}>订单号</Text>
-              <Text style={[styles.th, C.product]}>商品名称</Text>
-              <Text style={[styles.th, C.courier]}>快递</Text>
-              <Text style={[styles.th, C.recipient]}>收件人</Text>
-              <Text style={[styles.th, C.phone]}>电话</Text>
-              <Text style={[styles.th, C.shelf]}>货架</Text>
-              <Text style={[styles.th, C.date]}>入库日期</Text>
-              <Text style={[styles.th, C.weight]}>重量</Text>
-              <Text style={[styles.th, C.status]}>状态</Text>
-              <Text style={[styles.th, C.action]}>操作</Text>
+            <View style={s.thead}>
+              <Text style={[s.th, C.no]}>#</Text>
+              <Text style={[s.th, C.order]}>订单号</Text>
+              <Text style={[s.th, C.product]}>商品名称</Text>
+              <Text style={[s.th, C.courier]}>快递</Text>
+              <Text style={[s.th, C.recipient]}>收件人</Text>
+              <Text style={[s.th, C.phone]}>电话</Text>
+              <Text style={[s.th, C.shelf]}>货架</Text>
+              <Text style={[s.th, C.date]}>入库日期</Text>
+              <Text style={[s.th, C.weight]}>重量</Text>
+              <Text style={[s.th, C.status]}>状态</Text>
+              <Text style={[s.th, C.action]}>操作</Text>
             </View>
 
-            {/* Data rows */}
             {filtered.length === 0 ? (
-              <View style={styles.emptyRow}>
-                <Text style={styles.emptyText}>暂无匹配记录</Text>
+              <View style={s.emptyRow}>
+                <Text style={s.emptyText}>暂无匹配记录</Text>
               </View>
             ) : (
               filtered.map((r, idx) => (
-                <TouchableOpacity
-                  key={r.id}
-                  onPress={() => setDetailRecord(r)}
-                  activeOpacity={0.75}
-                >
-                  <View style={[styles.trow, idx % 2 === 0 ? styles.rowEven : styles.rowOdd]}>
-                    <Text style={[styles.td, C.no]}>{idx + 1}</Text>
+                <TouchableOpacity key={r.id} onPress={() => setDetailRecord(r)} activeOpacity={0.75}>
+                  <View style={[s.trow, idx % 2 === 0 ? s.rowEven : s.rowOdd]}>
+                    <Text style={[s.td, C.no, s.tdNo]}>{idx + 1}</Text>
 
-                    <View style={[styles.tdView, C.order]}>
-                      <Text style={styles.orderText} numberOfLines={1}>{r.orderNo}</Text>
-                      {r.remark ? (
-                        <Text style={styles.remarkText} numberOfLines={1}>{r.remark}</Text>
-                      ) : null}
+                    <View style={[s.tdView, C.order]}>
+                      <Text style={s.orderText} numberOfLines={1}>{r.orderNo}</Text>
+                      {r.remark ? <Text style={s.remarkText} numberOfLines={1}>{r.remark}</Text> : null}
                     </View>
 
-                    <Text style={[styles.td, C.product]} numberOfLines={2}>{r.productName}</Text>
+                    <Text style={[s.td, C.product]} numberOfLines={2}>{r.productName}</Text>
 
-                    <View style={[styles.tdView, C.courier]}>
-                      <View style={[styles.courierBadge, { backgroundColor: COURIER_COLOR[r.courier] || "#888" }]}>
-                        <Text style={styles.courierBadgeText}>{COURIER_ABBR[r.courier] || r.courier.slice(0, 2)}</Text>
+                    <View style={[s.tdView, C.courier]}>
+                      <View style={[s.courierBadge, { backgroundColor: COURIER_COLOR[r.courier] || "#888" }]}>
+                        <Text style={s.courierBadgeText}>{COURIER_ABBR[r.courier] || r.courier.slice(0, 2)}</Text>
                       </View>
                     </View>
 
-                    <Text style={[styles.td, C.recipient]}>{r.recipient}</Text>
-                    <Text style={[styles.td, C.phone, styles.phoneText]}>{r.phone}</Text>
+                    <Text style={[s.td, C.recipient]}>{r.recipient}</Text>
+                    <Text style={[s.td, C.phone, s.phoneText]}>{r.phone}</Text>
 
-                    <View style={[styles.tdView, C.shelf]}>
-                      <View style={styles.shelfBadge}>
-                        <Text style={styles.shelfText}>{r.shelf || "—"}</Text>
+                    <View style={[s.tdView, C.shelf]}>
+                      <View style={s.shelfBadge}>
+                        <Text style={s.shelfText}>{r.shelf || "—"}</Text>
                       </View>
                     </View>
 
-                    <Text style={[styles.td, C.date]}>{r.entryDate.slice(5)}</Text>
-                    <Text style={[styles.td, C.weight]}>{r.weight ? `${r.weight}kg` : "—"}</Text>
+                    <Text style={[s.td, C.date]}>{r.entryDate.slice(5)}</Text>
+                    <Text style={[s.td, C.weight]}>{r.weight ? `${r.weight}kg` : "—"}</Text>
 
-                    <View style={[styles.tdView, C.status]}>
+                    <View style={[s.tdView, C.status]}>
                       <TouchableOpacity onPress={() => cycleStatus(r.id)}>
-                        <View style={[styles.statusBadge, { backgroundColor: STATUS_CFG[r.status].bg }]}>
-                          <Text style={[styles.statusText, { color: STATUS_CFG[r.status].color }]}>
+                        <View style={[s.statusBadge, { backgroundColor: STATUS_CFG[r.status].bg }]}>
+                          <Text style={[s.statusText, { color: STATUS_CFG[r.status].color }]}>
                             {STATUS_CFG[r.status].label}
                           </Text>
                         </View>
                       </TouchableOpacity>
                     </View>
 
-                    <View style={[styles.tdView, C.action]}>
+                    <View style={[s.tdView, C.action]}>
                       <IconButton
                         icon="pencil-outline"
                         size={17}
                         iconColor="#6750A4"
                         onPress={() => openEdit(r)}
-                        style={styles.actionBtn}
+                        style={s.actionBtn}
                       />
                       <IconButton
                         icon="delete-outline"
                         size={17}
                         iconColor="#EF5350"
                         onPress={() => handleDelete(r.id)}
-                        style={styles.actionBtn}
+                        style={s.actionBtn}
                       />
                     </View>
                   </View>
@@ -527,7 +522,7 @@ export default function WarehouseScreen() {
         <FAB
           icon="plus"
           label="新增入库"
-          style={styles.fab}
+          style={s.fab}
           color="#fff"
           onPress={openAdd}
         />
@@ -536,68 +531,67 @@ export default function WarehouseScreen() {
         <Modal
           visible={detailRecord !== null}
           onDismiss={() => setDetailRecord(null)}
-          contentContainerStyle={styles.modal}
+          contentContainerStyle={s.modal}
         >
           {detailRecord && (() => {
             const days = daysSince(detailRecord.entryDate);
             const cfg = STATUS_CFG[detailRecord.status];
             return (
               <View>
-                <View style={styles.modalHeader}>
-                  <Text variant="titleLarge" style={styles.modalTitle}>包裹详情</Text>
+                <View style={s.modalHeader}>
+                  <Text variant="titleLarge" style={s.modalTitle}>包裹详情</Text>
                   <IconButton icon="close" onPress={() => setDetailRecord(null)} />
                 </View>
                 <Divider />
-                <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                  {/* Pickup code card */}
-                  <View style={detailStyles.codeCard}>
-                    <Text style={detailStyles.codeLabel}>取件码</Text>
-                    <Text style={detailStyles.codeValue}>{detailRecord.pickupCode}</Text>
-                    <Text style={detailStyles.codeHint}>告知客户此取件码，凭码取件</Text>
+                <ScrollView style={s.modalBody} showsVerticalScrollIndicator={false}>
+                  {/* Pickup code */}
+                  <View style={ds.codeCard}>
+                    <Text style={ds.codeLabel}>取件码</Text>
+                    <Text style={ds.codeValue}>{detailRecord.pickupCode}</Text>
+                    <Text style={ds.codeHint}>告知客户此取件码，凭码取件</Text>
                   </View>
 
-                  {/* Status + days */}
-                  <View style={[detailStyles.statusRow, { backgroundColor: cfg.bg }]}>
-                    <Text style={[detailStyles.statusBadge, { color: cfg.color }]}>{cfg.label}</Text>
-                    <Text style={detailStyles.daysText}>
+                  {/* Status */}
+                  <View style={[ds.statusRow, { backgroundColor: cfg.bg }]}>
+                    <Text style={[ds.statusLabel, { color: cfg.color }]}>{cfg.label}</Text>
+                    <Text style={ds.daysText}>
                       已存放 {days} 天{days >= 3 ? "  ⚠ 建议提醒客户" : ""}
                     </Text>
                   </View>
 
-                  {/* Info grid */}
-                  <View style={detailStyles.infoCard}>
+                  {/* Info */}
+                  <View style={ds.infoCard}>
                     <DetailRow label="订单号"   value={detailRecord.orderNo} />
-                    <Divider style={detailStyles.divider} />
+                    <Divider style={ds.divider} />
                     <DetailRow label="商品名称" value={detailRecord.productName} />
-                    <Divider style={detailStyles.divider} />
+                    <Divider style={ds.divider} />
                     <DetailRow label="快递公司" value={detailRecord.courier} />
-                    <Divider style={detailStyles.divider} />
+                    <Divider style={ds.divider} />
                     <DetailRow label="收件人"   value={detailRecord.recipient} />
-                    <Divider style={detailStyles.divider} />
+                    <Divider style={ds.divider} />
                     <DetailRow label="联系电话" value={detailRecord.phone || "—"} />
-                    <Divider style={detailStyles.divider} />
+                    <Divider style={ds.divider} />
                     <DetailRow label="货架号"   value={detailRecord.shelf || "—"} />
-                    <Divider style={detailStyles.divider} />
+                    <Divider style={ds.divider} />
                     <DetailRow label="入库日期" value={detailRecord.entryDate} />
-                    <Divider style={detailStyles.divider} />
+                    <Divider style={ds.divider} />
                     <DetailRow label="重量"     value={detailRecord.weight ? `${detailRecord.weight} kg` : "—"} />
                     {detailRecord.remark ? (
                       <>
-                        <Divider style={detailStyles.divider} />
+                        <Divider style={ds.divider} />
                         <DetailRow label="备注" value={detailRecord.remark} />
                       </>
                     ) : null}
                   </View>
 
-                  {/* Actions */}
-                  <View style={detailStyles.actions}>
+                  <View style={ds.actions}>
                     {detailRecord.status !== "picked" && (
                       <Button
                         mode="contained"
                         icon="check-circle-outline"
                         onPress={() => markAsPicked(detailRecord.id)}
-                        style={[detailStyles.actionBtn, { backgroundColor: "#2E7D32" }]}
-                        contentStyle={detailStyles.actionBtnContent}
+                        style={[ds.actionBtn, { backgroundColor: "#2E7D32" }]}
+                        contentStyle={ds.actionBtnContent}
                       >
                         标记已取件
                       </Button>
@@ -606,8 +600,8 @@ export default function WarehouseScreen() {
                       mode="outlined"
                       icon="pencil-outline"
                       onPress={() => openEdit(detailRecord)}
-                      style={detailStyles.actionBtn}
-                      contentStyle={detailStyles.actionBtnContent}
+                      style={ds.actionBtn}
+                      contentStyle={ds.actionBtnContent}
                     >
                       编辑信息
                     </Button>
@@ -615,9 +609,9 @@ export default function WarehouseScreen() {
                       mode="outlined"
                       icon="delete-outline"
                       onPress={() => handleDelete(detailRecord.id)}
-                      style={[detailStyles.actionBtn, detailStyles.deleteBtn]}
+                      style={[ds.actionBtn, ds.deleteBtn]}
                       textColor="#EF5350"
-                      contentStyle={detailStyles.actionBtnContent}
+                      contentStyle={ds.actionBtnContent}
                     >
                       删除记录
                     </Button>
@@ -632,17 +626,17 @@ export default function WarehouseScreen() {
         <Modal
           visible={modalVisible}
           onDismiss={closeFormModal}
-          contentContainerStyle={styles.modal}
+          contentContainerStyle={s.modal}
         >
           <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
-            <View style={styles.modalHeader}>
-              <Text variant="titleLarge" style={styles.modalTitle}>
+            <View style={s.modalHeader}>
+              <Text variant="titleLarge" style={s.modalTitle}>
                 {isEditing ? "编辑入库记录" : "新增入库记录"}
               </Text>
               <IconButton icon="close" onPress={closeFormModal} />
             </View>
             <Divider />
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={s.modalBody} showsVerticalScrollIndicator={false}>
               {!isEditing && (
                 <>
                   <Button
@@ -652,15 +646,15 @@ export default function WarehouseScreen() {
                       setModalVisible(false);
                       router.push({ pathname: "/camera", params: { from: "warehouse" } } as any);
                     }}
-                    style={styles.scanBtn}
-                    contentStyle={styles.scanBtnContent}
+                    style={s.scanBtn}
+                    contentStyle={s.scanBtnContent}
                   >
                     扫码录入商品信息
                   </Button>
-                  <View style={styles.orRow}>
-                    <View style={styles.orLine} />
-                    <Text style={styles.orText}>或手动填写</Text>
-                    <View style={styles.orLine} />
+                  <View style={s.orRow}>
+                    <View style={s.orLine} />
+                    <Text style={s.orText}>或手动填写</Text>
+                    <View style={s.orLine} />
                   </View>
                 </>
               )}
@@ -671,7 +665,8 @@ export default function WarehouseScreen() {
                 onChangeText={(v) => setForm({ ...form, orderNo: v })}
                 mode="outlined"
                 left={<TextInput.Icon icon="barcode-scan" />}
-                style={styles.formInput}
+                style={s.formInput}
+                outlineStyle={s.inputOutline}
               />
               <TextInput
                 label="商品名称 *"
@@ -679,7 +674,8 @@ export default function WarehouseScreen() {
                 onChangeText={(v) => setForm({ ...form, productName: v })}
                 mode="outlined"
                 left={<TextInput.Icon icon="package-variant" />}
-                style={styles.formInput}
+                style={s.formInput}
+                outlineStyle={s.inputOutline}
               />
 
               <Menu
@@ -694,7 +690,8 @@ export default function WarehouseScreen() {
                       left={<TextInput.Icon icon="truck-delivery-outline" />}
                       right={<TextInput.Icon icon="chevron-down" />}
                       editable={false}
-                      style={styles.formInput}
+                      style={s.formInput}
+                      outlineStyle={s.inputOutline}
                       pointerEvents="none"
                     />
                   </TouchableOpacity>
@@ -715,7 +712,8 @@ export default function WarehouseScreen() {
                 onChangeText={(v) => setForm({ ...form, recipient: v })}
                 mode="outlined"
                 left={<TextInput.Icon icon="account-outline" />}
-                style={styles.formInput}
+                style={s.formInput}
+                outlineStyle={s.inputOutline}
               />
               <TextInput
                 label="联系电话"
@@ -724,7 +722,8 @@ export default function WarehouseScreen() {
                 mode="outlined"
                 left={<TextInput.Icon icon="phone-outline" />}
                 keyboardType="phone-pad"
-                style={styles.formInput}
+                style={s.formInput}
+                outlineStyle={s.inputOutline}
               />
               <TextInput
                 label="货架号（如 A-01）"
@@ -732,7 +731,8 @@ export default function WarehouseScreen() {
                 onChangeText={(v) => setForm({ ...form, shelf: v })}
                 mode="outlined"
                 left={<TextInput.Icon icon="archive-outline" />}
-                style={styles.formInput}
+                style={s.formInput}
+                outlineStyle={s.inputOutline}
               />
               <TextInput
                 label="重量（kg）"
@@ -741,7 +741,8 @@ export default function WarehouseScreen() {
                 mode="outlined"
                 left={<TextInput.Icon icon="weight" />}
                 keyboardType="decimal-pad"
-                style={styles.formInput}
+                style={s.formInput}
+                outlineStyle={s.inputOutline}
               />
               <TextInput
                 label="备注"
@@ -751,22 +752,14 @@ export default function WarehouseScreen() {
                 left={<TextInput.Icon icon="note-text-outline" />}
                 multiline
                 numberOfLines={3}
-                style={styles.formInput}
+                style={s.formInput}
+                outlineStyle={s.inputOutline}
               />
-              <View style={styles.modalFooter}>
-                <Button
-                  mode="outlined"
-                  onPress={closeFormModal}
-                  style={styles.footerBtn}
-                >
+              <View style={s.modalFooter}>
+                <Button mode="outlined" onPress={closeFormModal} style={s.footerBtn} contentStyle={s.footerBtnContent}>
                   取消
                 </Button>
-                <Button
-                  mode="contained"
-                  icon="check"
-                  onPress={handleSubmit}
-                  style={styles.footerBtn}
-                >
+                <Button mode="contained" icon="check" onPress={handleSubmit} style={s.footerBtn} contentStyle={s.footerBtnContent} buttonColor="#6750A4">
                   {isEditing ? "保存修改" : "确认入库"}
                 </Button>
               </View>
@@ -778,7 +771,7 @@ export default function WarehouseScreen() {
   );
 }
 
-// Column widths
+// ── Column widths ──────────────────────────────────────────────────────────────
 const C = StyleSheet.create({
   no:        { width: 40 },
   order:     { width: 138 },
@@ -793,172 +786,221 @@ const C = StyleSheet.create({
   action:    { width: 80 },
 });
 
-const detailStyles = StyleSheet.create({
+// ── Detail modal styles ────────────────────────────────────────────────────────
+const ds = StyleSheet.create({
   codeCard: {
     alignItems: "center",
-    backgroundColor: "#6750A4",
-    borderRadius: 16,
-    paddingVertical: 20,
+    backgroundColor: "#5B3EC8",
+    borderRadius: 20,
+    paddingVertical: 24,
     marginBottom: 14,
+    shadowColor: "#5B3EC8",
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 6,
   },
-  codeLabel: { color: "rgba(255,255,255,0.75)", fontSize: 13, marginBottom: 6 },
-  codeValue: { color: "#fff", fontSize: 52, fontWeight: "900", letterSpacing: 12 },
-  codeHint:  { color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 8 },
+  codeLabel: { color: "rgba(255,255,255,0.7)", fontSize: 13, letterSpacing: 1, marginBottom: 8 },
+  codeValue: { color: "#fff", fontSize: 56, fontWeight: "900", letterSpacing: 14 },
+  codeHint:  { color: "rgba(255,255,255,0.55)", fontSize: 11, marginTop: 10 },
 
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     marginBottom: 14,
   },
-  statusBadge: { fontSize: 14, fontWeight: "700" },
-  daysText:    { fontSize: 12, color: "#555" },
+  statusLabel: { fontSize: 14, fontWeight: "700" },
+  daysText:    { fontSize: 12, color: "#666" },
 
   infoCard: {
-    backgroundColor: "#F8F5FF",
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    backgroundColor: "#F7F3FF",
+    borderRadius: 14,
+    paddingHorizontal: 16,
     paddingVertical: 4,
-    marginBottom: 16,
+    marginBottom: 18,
   },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-  },
-  label:   { fontSize: 13, color: "#888", flex: 1 },
-  value:   { fontSize: 13, color: "#1C1B1F", fontWeight: "500", flex: 2, textAlign: "right" },
+  row:     { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 11 },
+  label:   { fontSize: 13, color: "#999", flex: 1 },
+  value:   { fontSize: 13, color: "#1C1B1F", fontWeight: "600", flex: 2, textAlign: "right" },
   divider: { backgroundColor: "#EEE" },
 
-  actions: { gap: 10, paddingBottom: 8 },
-  actionBtn: { borderRadius: 10 },
+  actions:       { gap: 10, paddingBottom: 8 },
+  actionBtn:     { borderRadius: 12 },
   actionBtnContent: { paddingVertical: 4 },
-  deleteBtn: { borderColor: "#EF5350" },
+  deleteBtn:     { borderColor: "#EF5350" },
 });
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#EEE8F4" },
+// ── Main styles ────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: "#F0EBF9" },
 
+  // Header
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#6750A4",
-    paddingHorizontal: 4,
-    paddingBottom: 10,
+    backgroundColor: "#5B3EC8",
+    paddingBottom: 14,
     paddingTop: 4,
+    overflow: "hidden",
   },
-  headerLeft:  { flexDirection: "row", alignItems: "center" },
+  headerBlob: { position: "absolute", borderRadius: 999 },
+  headerBlob1: { width: 160, height: 160, top: -80, right: -30, backgroundColor: "rgba(255,255,255,0.06)" },
+  headerBlob2: { width: 100, height: 100, bottom: -40, left: 40, backgroundColor: "rgba(255,255,255,0.04)" },
+  headerInner: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 8 },
+  headerLeft:  { flexDirection: "row", alignItems: "center", gap: 4 },
   headerRight: { flexDirection: "row", alignItems: "center" },
-  headerIcon:  { margin: 0 },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
-  headerSub:   { color: "rgba(255,255,255,0.75)", fontSize: 12, marginTop: 2 },
 
-  statsScroll:  { flexGrow: 0, marginTop: 12 },
-  statsContent: { paddingHorizontal: 12, gap: 10 },
-  statCard: {
-    width: 90,
-    borderRadius: 12,
+  headerIconWrap: {
+    width: 44, height: 44,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
+    justifyContent: "center",
+    marginRight: 4,
+  },
+  headerIconBtn: { margin: 0 },
+
+  headerTitle: { color: "#fff", fontSize: 17, fontWeight: "800", letterSpacing: 0.5 },
+  headerSub:   { color: "rgba(255,255,255,0.65)", fontSize: 12, marginTop: 2 },
+
+  headerAction: {
+    width: 36, height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
+  },
+  headerActionIcon: { margin: 0 },
+
+  // Stats
+  statsScroll:  { flexGrow: 0, marginTop: 14 },
+  statsContent: { paddingHorizontal: 14, gap: 10 },
+  statCard: {
+    width: 96,
+    borderRadius: 16,
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 6,
     backgroundColor: "#fff",
     borderTopWidth: 3,
   },
-  statIcon:  { margin: 0, marginBottom: 2 },
-  statValue: { fontSize: 22, fontWeight: "800", lineHeight: 26 },
-  statLabel: { fontSize: 11, color: "#666", marginTop: 2 },
+  statIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center", marginBottom: 6 },
+  statIconBtn:  { margin: 0 },
+  statValue:    { fontSize: 24, fontWeight: "900", lineHeight: 28 },
+  statLabel:    { fontSize: 11, color: "#888", marginTop: 3, fontWeight: "500" },
 
-  searchWrap:  { paddingHorizontal: 12, paddingTop: 12 },
-  searchbar:   { borderRadius: 10, backgroundColor: "#fff", elevation: 1 },
+  // Search
+  searchWrap:  { paddingHorizontal: 14, paddingTop: 14 },
+  searchbar:   { borderRadius: 14, backgroundColor: "#fff", elevation: 0, borderWidth: 1, borderColor: "#E8E0F4" },
   searchInput: { fontSize: 14 },
 
+  // Filter
   filterScroll:  { flexGrow: 0 },
-  filterContent: { paddingHorizontal: 12, paddingVertical: 6, gap: 8, alignItems: "center" },
-  filterChip: {
-    paddingHorizontal: 14,
+  filterContent: { paddingHorizontal: 14, paddingVertical: 8, gap: 8, alignItems: "center" },
+  chip: {
+    paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#DDD",
+    borderWidth: 1.5,
+    borderColor: "#E0D8F0",
   },
-  filterChipActive:     { backgroundColor: "#6750A4", borderColor: "#6750A4" },
-  filterChipText:       { fontSize: 13, color: "#555" },
-  filterChipTextActive: { color: "#fff", fontWeight: "600" },
+  chipActive:     { backgroundColor: "#5B3EC8", borderColor: "#5B3EC8" },
+  chipText:       { fontSize: 13, color: "#666", fontWeight: "500" },
+  chipTextActive: { color: "#fff", fontWeight: "700" },
 
+  // Count
   countRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingBottom: 6,
   },
-  countText: { fontSize: 13, color: "#444", fontWeight: "600" },
-  countHint: { fontSize: 11, color: "#999" },
+  countText: { fontSize: 13, color: "#5B3EC8", fontWeight: "700" },
+  countHint: { fontSize: 11, color: "#AAA" },
 
-  tableOuter: { flex: 1, backgroundColor: "#fff", marginHorizontal: 12, borderRadius: 12, marginBottom: 4 },
+  // Table
+  tableOuter: {
+    flex: 1,
+    backgroundColor: "#fff",
+    marginHorizontal: 14,
+    borderRadius: 16,
+    marginBottom: 6,
+    shadowColor: "#5B3EC8",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 2,
+  },
   thead: {
     flexDirection: "row",
-    backgroundColor: "#6750A4",
-    paddingVertical: 10,
+    backgroundColor: "#5B3EC8",
+    paddingVertical: 11,
     paddingHorizontal: 6,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
-  th: { fontSize: 12, fontWeight: "700", color: "#fff", textAlign: "center" },
+  th: { fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.9)", textAlign: "center" },
+
   trow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 6,
     borderBottomWidth: 1,
-    borderBottomColor: "#F0EAF8",
+    borderBottomColor: "#F3EEF9",
   },
   rowEven: { backgroundColor: "#fff" },
-  rowOdd:  { backgroundColor: "#FAF8FD" },
-  td: { fontSize: 13, color: "#333", textAlign: "center", paddingHorizontal: 2 },
+  rowOdd:  { backgroundColor: "#FAFAFE" },
+
+  td:     { fontSize: 13, color: "#333", textAlign: "center", paddingHorizontal: 2 },
+  tdNo:   { color: "#AAA", fontSize: 12, fontWeight: "600" },
   tdView: { alignItems: "center", justifyContent: "center" },
-  orderText:  { fontSize: 12, color: "#1A1A1A", fontWeight: "600" },
-  remarkText: { fontSize: 10, color: "#999", marginTop: 2 },
-  phoneText:  { fontSize: 11, color: "#666" },
+
+  orderText:  { fontSize: 12, color: "#1A1A1A", fontWeight: "700" },
+  remarkText: { fontSize: 10, color: "#BBB", marginTop: 2 },
+  phoneText:  { fontSize: 11, color: "#888" },
 
   courierBadge: {
-    width: 32, height: 32,
-    borderRadius: 8,
+    width: 34, height: 34,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   courierBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 
   shelfBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 9,
     paddingVertical: 3,
     backgroundColor: "#EDE7F6",
-    borderRadius: 6,
+    borderRadius: 8,
   },
-  shelfText: { fontSize: 12, color: "#6750A4", fontWeight: "600" },
+  shelfText: { fontSize: 12, color: "#5B3EC8", fontWeight: "700" },
 
-  statusBadge: { paddingHorizontal: 7, paddingVertical: 4, borderRadius: 10 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
   statusText:  { fontSize: 11, fontWeight: "700" },
 
   actionBtn: { margin: 0, marginHorizontal: -2 },
 
   emptyRow:  { height: 100, alignItems: "center", justifyContent: "center" },
-  emptyText: { color: "#AAA", fontSize: 14 },
+  emptyText: { color: "#CCC", fontSize: 14 },
 
-  fab: { position: "absolute", bottom: 24, right: 20, backgroundColor: "#6750A4" },
+  // FAB
+  fab: { position: "absolute", bottom: 24, right: 20, backgroundColor: "#5B3EC8" },
 
+  // Modal shared
   modal: {
     backgroundColor: "#fff",
     marginHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 24,
     maxHeight: "88%",
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 12,
   },
   modalHeader: {
     flexDirection: "row",
@@ -968,15 +1010,17 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     paddingVertical: 4,
   },
-  modalTitle:  { fontWeight: "700", color: "#1C1B1F" },
+  modalTitle:  { fontWeight: "800", color: "#1C1B1F", fontSize: 18 },
   modalBody:   { padding: 16 },
   formInput:   { marginBottom: 12, backgroundColor: "#fff" },
+  inputOutline: { borderRadius: 12 },
   modalFooter: { flexDirection: "row", gap: 12, paddingTop: 4, paddingBottom: 8 },
-  footerBtn:   { flex: 1, borderRadius: 8 },
+  footerBtn:      { flex: 1, borderRadius: 12 },
+  footerBtnContent: { paddingVertical: 4 },
 
-  scanBtn:        { borderRadius: 10, marginBottom: 4 },
+  scanBtn:        { borderRadius: 12, marginBottom: 4 },
   scanBtnContent: { paddingVertical: 4 },
   orRow:  { flexDirection: "row", alignItems: "center", marginVertical: 14 },
-  orLine: { flex: 1, height: 1, backgroundColor: "#E0E0E0" },
-  orText: { marginHorizontal: 10, fontSize: 12, color: "#999" },
+  orLine: { flex: 1, height: 1, backgroundColor: "#EEE" },
+  orText: { marginHorizontal: 12, fontSize: 12, color: "#BBB" },
 });
