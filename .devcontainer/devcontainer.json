@@ -1,0 +1,59 @@
+{
+  "name": "my-rn-app (Expo + React Native)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22",
+      "nodeGypDependencies": true
+    }
+  },
+
+  "forwardPorts": [8081, 19000, 19006],
+  "portsAttributes": {
+    "8081": {
+      "label": "Metro Bundler",
+      "onAutoForward": "notify"
+    },
+    "19000": {
+      "label": "Expo DevTools",
+      "onAutoForward": "notify"
+    },
+    "19006": {
+      "label": "Expo Web",
+      "onAutoForward": "openBrowser"
+    }
+  },
+
+  "postCreateCommand": "npm install -g pnpm expo-cli && pnpm install",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "msjsdiag.vscode-react-native",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next",
+        "expo.vscode-expo-tools",
+        "bradlc.vscode-tailwindcss",
+        "pkief.material-icon-theme"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.tabSize": 2,
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "eslint.validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ]
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "EXPO_NO_TELEMETRY": "1"
+  }
+}
